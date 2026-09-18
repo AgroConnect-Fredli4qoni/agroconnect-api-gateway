@@ -4,18 +4,43 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
+	"net/http/httputil"
+	"net/url"
+
+	"github.com/agroconnect/api-gateway/config"
+	"github.com/agroconnect/api-gateway/middleware"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
-func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+func newReverseProxy(targetURL string) http.Handler {
+	target, err := url.Parse(targetURL)
+	if err != nil {
+		log.Fatalf("Invalid target URL for proxy %s: %v", targetURL, err)
 	}
 
-	mux := http.NewServeMux()
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	originalDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		originalDirector(req)
+		req.Host = target.Host
+	}
 
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	return proxy
+}
+
+func main() {
+	cfg := config.LoadConfig()
+
+	catalogProxy := newReverseProxy(cfg.CatalogServiceURL)
+	orderProxy := newReverseProxy(cfg.OrderServiceURL)
+	weatherProxy := newReverseProxy(cfg.WeatherServiceURL)
+
+	authMiddleware := middleware.JWTAuthMiddleware(cfg.JWTSecret)
+
+	router := mux.NewRouter()
+
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -23,10 +48,41 @@ func main() {
 			"status":  "UP",
 			"version": "1.0.0",
 		})
-	})
+	}).Methods("GET")
 
-	log.Printf("AgroConnect API Gateway running on port :%s", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	router.Handle("/api/auth/register", orderProxy).Methods("POST")
+	router.Handle("/api/auth/login", orderProxy).Methods("POST")
+
+	router.Handle("/api/products", catalogProxy).Methods("GET")
+	router.Handle("/api/products/{id}", catalogProxy).Methods("GET")
+
+	router.Handle("/api/weather", weatherProxy).Methods("GET")
+
+	router.Handle("/api/orders/{code}", orderProxy).Methods("GET")
+
+	router.Handle("/api/products", authMiddleware(catalogProxy)).Methods("POST")
+	router.Handle("/api/products/{id}", authMiddleware(catalogProxy)).Methods("DELETE")
+	router.Handle("/api/products/{id}/stock", authMiddleware(catalogProxy)).Methods("PATCH")
+
+	router.Handle("/api/orders", authMiddleware(orderProxy)).Methods("POST")
+	router.Handle("/api/orders/user", authMiddleware(orderProxy)).Methods("GET")
+
+	router.PathPrefix("/api/products").Handler(catalogProxy)
+	router.PathPrefix("/api/auth").Handler(orderProxy)
+	router.PathPrefix("/api/orders").Handler(orderProxy)
+	router.PathPrefix("/api/weather").Handler(weatherProxy)
+
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}).Handler(router)
+
+	log.Printf("AgroConnect API Gateway listening on port :%s", cfg.Port)
+	if err := http.ListenAndServe(":"+cfg.Port, corsHandler); err != nil {
+		log.Fatalf("API Gateway terminated: %v", err)
 	}
 }
