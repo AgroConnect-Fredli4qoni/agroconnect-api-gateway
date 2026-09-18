@@ -1,4 +1,3 @@
-# Build stage
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
@@ -6,13 +5,11 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 COPY go.mod ./
-# Note: go.sum will be created if dependencies are downloaded
 RUN go mod download || true
 
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/api-gateway main.go
 
-# Production stage
 FROM alpine:3.18
 
 RUN apk add --no-cache ca-certificates curl
