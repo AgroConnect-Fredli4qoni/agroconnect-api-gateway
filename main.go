@@ -25,6 +25,14 @@ func newReverseProxy(targetURL string) http.Handler {
 		originalDirector(req)
 		req.Host = target.Host
 	}
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		resp.Header.Del("Access-Control-Allow-Origin")
+		resp.Header.Del("Access-Control-Allow-Credentials")
+		resp.Header.Del("Access-Control-Allow-Methods")
+		resp.Header.Del("Access-Control-Allow-Headers")
+		resp.Header.Del("Access-Control-Expose-Headers")
+		return nil
+	}
 
 	return proxy
 }
@@ -73,7 +81,9 @@ func main() {
 	router.PathPrefix("/api/weather").Handler(weatherProxy)
 
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowOriginFunc: func(origin string) bool {
+			return true
+		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
