@@ -60,6 +60,7 @@ func main() {
 
 	router.Handle("/api/auth/register", orderProxy).Methods("POST")
 	router.Handle("/api/auth/login", orderProxy).Methods("POST")
+	router.Handle("/api/auth/profile", authMiddleware(orderProxy)).Methods("GET", "PUT")
 
 	router.Handle("/api/products", catalogProxy).Methods("GET")
 	router.Handle("/api/products/{id}", catalogProxy).Methods("GET")
