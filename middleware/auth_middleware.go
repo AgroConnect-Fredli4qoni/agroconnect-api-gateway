@@ -64,6 +64,16 @@ func JWTAuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 				return
 			}
 
+			if sub, ok := claims["sub"]; ok {
+				r.Header.Set("X-User-ID", fmt.Sprintf("%v", sub))
+			}
+			if name, ok := claims["name"]; ok {
+				r.Header.Set("X-User-Name", fmt.Sprintf("%v", name))
+			}
+			if role, ok := claims["role"]; ok {
+				r.Header.Set("X-User-Role", fmt.Sprintf("%v", role))
+			}
+
 			ctx := context.WithValue(r.Context(), UserClaimsKey, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

@@ -72,7 +72,7 @@ func main() {
 	router.Handle("/api/orders/{code}", orderProxy).Methods("GET")
 
 	router.Handle("/api/products", authMiddleware(catalogProxy)).Methods("POST")
-	router.Handle("/api/products/{id}", authMiddleware(catalogProxy)).Methods("DELETE")
+	router.Handle("/api/products/{id}", authMiddleware(catalogProxy)).Methods("PUT", "DELETE")
 	router.Handle("/api/products/{id}/stock", authMiddleware(catalogProxy)).Methods("PATCH")
 
 	router.Handle("/api/orders", authMiddleware(orderProxy)).Methods("POST")
