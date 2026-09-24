@@ -69,6 +69,9 @@ func main() {
 
 	router.Handle("/api/weather", weatherProxy).Methods("GET")
 
+	router.Handle("/api/orders/stats", authMiddleware(orderProxy)).Methods("GET")
+	router.Handle("/api/orders/user", authMiddleware(orderProxy)).Methods("GET")
+	router.Handle("/api/orders/{code}/status", authMiddleware(orderProxy)).Methods("PATCH", "PUT")
 	router.Handle("/api/orders/{code}", orderProxy).Methods("GET")
 
 	router.Handle("/api/products", authMiddleware(catalogProxy)).Methods("POST")
@@ -76,7 +79,6 @@ func main() {
 	router.Handle("/api/products/{id}/stock", authMiddleware(catalogProxy)).Methods("PATCH")
 
 	router.Handle("/api/orders", authMiddleware(orderProxy)).Methods("POST")
-	router.Handle("/api/orders/user", authMiddleware(orderProxy)).Methods("GET")
 
 	router.PathPrefix("/api/products").Handler(catalogProxy)
 	router.PathPrefix("/api/farmers").Handler(catalogProxy)
