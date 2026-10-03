@@ -71,8 +71,14 @@ func main() {
 
 	router.Handle("/api/orders/stats", authMiddleware(orderProxy)).Methods("GET")
 	router.Handle("/api/orders/user", authMiddleware(orderProxy)).Methods("GET")
+	router.Handle("/api/orders/webhook/midtrans", orderProxy).Methods("POST")
+	router.Handle("/api/orders/{code}/snap-token", orderProxy).Methods("GET", "POST")
 	router.Handle("/api/orders/{code}/status", authMiddleware(orderProxy)).Methods("PATCH", "PUT")
 	router.Handle("/api/orders/{code}", orderProxy).Methods("GET")
+
+	router.Handle("/api/wallet", authMiddleware(orderProxy)).Methods("GET")
+	router.Handle("/api/wallet/withdraw", authMiddleware(orderProxy)).Methods("POST")
+	router.Handle("/api/wallet/account", authMiddleware(orderProxy)).Methods("PUT")
 
 	router.Handle("/api/products", authMiddleware(catalogProxy)).Methods("POST")
 	router.Handle("/api/products/{id}", authMiddleware(catalogProxy)).Methods("PUT", "DELETE")
@@ -84,6 +90,7 @@ func main() {
 	router.PathPrefix("/api/farmers").Handler(catalogProxy)
 	router.PathPrefix("/api/auth").Handler(orderProxy)
 	router.PathPrefix("/api/orders").Handler(orderProxy)
+	router.PathPrefix("/api/wallet").Handler(authMiddleware(orderProxy))
 	router.PathPrefix("/api/weather").Handler(weatherProxy)
 
 	corsHandler := cors.New(cors.Options{
