@@ -80,6 +80,12 @@ func main() {
 	router.Handle("/api/wallet/withdraw", authMiddleware(orderProxy)).Methods("POST")
 	router.Handle("/api/wallet/account", authMiddleware(orderProxy)).Methods("PUT")
 
+	router.Handle("/api/admin/stats", authMiddleware(orderProxy)).Methods("GET")
+	router.Handle("/api/admin/users", authMiddleware(orderProxy)).Methods("GET")
+	router.Handle("/api/admin/orders", authMiddleware(orderProxy)).Methods("GET")
+	router.Handle("/api/admin/withdrawals", authMiddleware(orderProxy)).Methods("GET")
+	router.Handle("/api/admin/withdrawals/{id}/status", authMiddleware(orderProxy)).Methods("PATCH", "PUT")
+
 	router.Handle("/api/products", authMiddleware(catalogProxy)).Methods("POST")
 	router.Handle("/api/products/{id}", authMiddleware(catalogProxy)).Methods("PUT", "DELETE")
 	router.Handle("/api/products/{id}/stock", authMiddleware(catalogProxy)).Methods("PATCH")
@@ -91,6 +97,7 @@ func main() {
 	router.PathPrefix("/api/auth").Handler(orderProxy)
 	router.PathPrefix("/api/orders").Handler(orderProxy)
 	router.PathPrefix("/api/wallet").Handler(authMiddleware(orderProxy))
+	router.PathPrefix("/api/admin").Handler(authMiddleware(orderProxy))
 	router.PathPrefix("/api/weather").Handler(weatherProxy)
 
 	corsHandler := cors.New(cors.Options{
